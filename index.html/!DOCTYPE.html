@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vote for Province</title>
+  <style>
+    body {
+      background-color: #0a0a0a;
+      color: #ffffff;
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+    }
+    .container {
+      max-width: 800px;
+      margin: auto;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 2.5em;
+      color: #ccc;
+      margin-bottom: 30px;
+    }
+    .vote-panel {
+      background-color: #1a1a1a;
+      padding: 10px 20px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .vote-panel .left {
+      text-align: left;
+    }
+    .vote-panel .right {
+      text-align: right;
+    }
+    .vote-btn {
+      background-color: #8f5fff;
+      color: white;
+      padding: 5px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .vote-btn[disabled] {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    .progress-bar {
+      height: 8px;
+      background-color: #444;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+      width: 100px;
+    }
+    .progress {
+      height: 100%;
+      background-color: #8f5fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>THE ONE AND ONLY</h1>
+    <p>คุณเหลือการโหวต: <span id="remaining-votes" style="color: #8f5fff;">5</span> ครั้ง | โหวตใหม่ได้อีกใน: <span id="timer" style="color: #8f5fff;">--:--:--</span></p>
+    <div id="vote-list"></div>
+  </div>
+
+  <script>
+    const provinces = [
+      "Krung Thep Maha Nakhon", "Krabi", "Kanchanaburi", "Kalasin", "Kamphaeng Phet", "Khon Kaen", "Chanthaburi", "Chachoengsao", "Chonburi", "Chainat",
+      "Chaiyaphum", "Chumphon", "Chiang Rai", "Chiang Mai", "Trang", "Trat", "Tak", "Nakhon Nayok", "Nakhon Pathom", "Nakhon Phanom",
+      "Nakhon Ratchasima", "Nakhon Si Thammarat", "Nakhon Sawan", "Narathiwat", "Nan", "Nonthaburi", "Bueng Kan", "Buriram", "Pathum Thani", "Prachuap Khiri Khan",
+      "Prachin Buri", "Pattani", "Phra Nakhon Si Ayutthaya", "Phayao", "Phang Nga", "Phatthalung", "Phichit", "Phitsanulok", "Phetchaburi", "Phetchabun",
+      "Phrae", "Phuket", "Maha Sarakham", "Mukdahan", "Mae Hong Son", "Yasothon", "Yala", "Roi Et", "Ranong", "Rayong",
+      "Ratchaburi", "Lopburi", "Lampang", "Lamphun", "Loei", "Sisaket", "Sakon Nakhon", "Songkhla", "Satun", "Samut Prakan",
+      "Samut Songkhram", "Samut Sakhon", "Sa Kaeo", "Saraburi", "Sing Buri", "Sukhothai", "Suphanburi", "Surat Thani", "Surin", "Nong Khai",
+      "Nong Bua Lam Phu", "Ang Thong", "Udon Thani", "Uttaradit", "Uthai Thani", "Ubon Ratchathani", "Amnat Charoen"
+    ];
+
+    const VOTE_LIMIT = 5;
+    const RESET_INTERVAL = 24 * 60 * 60 * 1000; // 24 ชม. ใน ms
+
+    let scores = JSON.parse(localStorage.getItem("scores")) || Array(provinces.length).fill(0);
+    let voteCount = parseInt(localStorage.getItem("voteCount") || "0");
+    let lastVoteTime = parseInt(localStorage.getItem("lastVoteTime") || "0");
+
+    const voteList = document.getElementById("vote-list");
+    const remainingVotesEl = document.getElementById("remaining-votes");
+    const timerEl = document.getElementById("timer");
+
+    function getRemainingTime() {
+      const now = Date.now();
+      return Math.max(0, (lastVoteTime + RESET_INTERVAL) - now);
+    }
+
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+      const s = String(totalSec % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
+
+    function vote(index) {
+      const remaining = getRemainingTime();
+      if (remaining > 0 && voteCount >= VOTE_LIMIT) return;
+
+      if (remaining <= 0) {
+        voteCount = 0;
+        lastVoteTime = 0;
+      }
+
+      scores[index]++;
+      voteCount++;
+      lastVoteTime = Date.now();
+
+      localStorage.setItem("scores", JSON.stringify(scores));
+      localStorage.setItem("voteCount", voteCount.toString());
+      localStorage.setItem("lastVoteTime", lastVoteTime.toString());
+
+      renderVotes();
+    }
+
+    function renderVotes() {
+      voteList.innerHTML = "";
+      const totalVotes = scores.reduce((a, b) => a + b, 0);
+      const remaining = getRemainingTime();
+      const disableVoting = remaining > 0 && voteCount >= VOTE_LIMIT;
+
+      remainingVotesEl.textContent = disableVoting ? 0 : VOTE_LIMIT - voteCount;
+
+      provinces.forEach((province, index) => {
+        const count = scores[index];
+        const percent = totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(1) : "0.0";
+
+        const item = document.createElement("div");
+        item.className = "vote-panel";
+        item.innerHTML = `
+          <div class="left">
+            <strong>MUT${(index + 1).toString().padStart(2, '0')}</strong> ${province}
+          </div>
+          <div class="right">
+            <button class="vote-btn" ${disableVoting ? 'disabled' : ''} onclick="vote(${index})">VOTE</button>
+            <div class="progress-bar">
+              <div class="progress" style="width: ${percent}%"></div>
+            </div>
+            <small>${percent}% (${count})</small>
+          </div>
+        `;
+        voteList.appendChild(item);
+      });
+    }
+
+    function updateTimer() {
+      const remaining = getRemainingTime();
+      if (remaining <= 0 && voteCount >= VOTE_LIMIT) {
+        voteCount = 0;
+        lastVoteTime = 0;
+        localStorage.setItem("voteCount", "0");
+        localStorage.setItem("lastVoteTime", "0");
+      }
+      timerEl.textContent = formatTime(remaining);
+      renderVotes();
+    }
+
+    renderVotes();
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  </script>
+</body>
+</html>
